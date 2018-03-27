@@ -8,6 +8,7 @@ from pynmea import nmea
 import time
 import serial
 import logging
+import picamera
 
 def getlocation(gpsdevice): #Pass in gps interface
     #Get current location and return it as a key pair
@@ -63,7 +64,7 @@ def saveData(wifitree, gpsdata, picnum, conn):
         #Save to database
 
         c = conn.cursor()
-        c.execute("INSERT INTO datasamples(bssid, essid, power, channel, enc_type, mode, pic_filename, latitude, longitude, altitude, created_at) VALUES('" + ap.address + "','" + ap.ssid + "','" + str(ap.signal) + "','" + str(ap.channel) + "','" + encryption + "','" + ap.mode + "', '" + picfilename + "'," + str(gpsdata['latitude']) + "," + str(gpsdata['longitude']) + ", " + str(gpsdata['altitude']) + ", " + gpsdata['timestamp'] + ")")
+        c.execute("INSERT INTO datasamples(bssid, essid, power, channel, enc_type, mode, pic_filename, latitude, longitude, altitude, created_at) VALUES('" + ap.address + "','" + ap.ssid + "','" + str(ap.signal) + "','" + str(ap.channel) + "','" + encryption + "','" + ap.mode + "', '" + picfilename + "','" + str(gpsdata['latitude']) + "','" + str(gpsdata['longitude']) + "', '" + str(gpsdata['altitude']) + "', '" + gpsdata['timestamp'] + "')")
         conn.commit()
 
 def scan(interface):
@@ -79,16 +80,23 @@ def main(argv):
         interface = argv[1]
         gpsdevice = argv[2]
     else:
-        interface = 'wlp3s0'
-        gpsdevice = '/dev/ttyACM0'
-
+        interface = 'wlan0'
+        gpsdevice = '/dev/ttyUSB0'
+    camera = picamera.PiCamera()
+    
     #Main Loop
     picnum = 0
     conn = initdb("balloonsat")
     while (1):
+        imagefile = "cap" + str(picnum) + ".jpg"
         #Get GPS Coords
         gpsdata = getlocation(gpsdevice)
-        wifitree = scan('wlp3s0')
+        wifitree = scan(interface)
+        print(gpsdata)
+        camera.exif_tags['GPS.GPSAltitude'] = gpsdata['altitude']
+        camera.exif_tags['GPS.GPSLatitude'] = gpsdata['latitude']
+        camera.exif_tags['GPS.GPSLongitude'] = gpsdata['longitude']
+        camera.capture(imagefile)
         saveData(wifitree, gpsdata, picnum, conn)
         picnum = picnum + 1
         time.sleep(10) #wait 10 seconds, then rescan
