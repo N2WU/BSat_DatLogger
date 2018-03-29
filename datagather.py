@@ -102,7 +102,7 @@ def main(argv):
         gpsdata = getlocation(gpsdevice)
         long = converter(gpsdata['longitude'])
         lat = converter(gpsdata['latitude'])
-        alt = (gpsdata['altitude']).as_integer_ratio()
+        alt = fractions.Fraction.from_float(gpsdata['altitude']).limit_denominator()
         wifitree = scan(interface)
         print(gpsdata)
         camera.exif_tags['GPS.GPSAltitude'] = alt
