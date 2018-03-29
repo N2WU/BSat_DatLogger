@@ -46,8 +46,8 @@ def initdb(dbname):
         #Open and create the database and add encoding types
         conn = sqlite3.connect(dbname + ".db")
         c = conn.cursor()
-        c.execute('''CREATE TABLE datasamples 
-            (bssid character(12), essid varchar(255), 
+        c.execute('''CREATE TABLE datasamples
+            (bssid character(12), essid varchar(255),
             power int, channel int, enc_type varchar(100), mode varchar(100), pic_filename varchar(100), latitude float, longitude float, altitude float, created_at int)''')
         conn.commit()
         print ("Database Created")
@@ -83,7 +83,7 @@ def main(argv):
         interface = 'wlan0'
         gpsdevice = '/dev/ttyUSB0'
     camera = picamera.PiCamera()
-    
+
     #Main Loop
     picnum = 0
     conn = initdb("balloonsat")
@@ -91,16 +91,26 @@ def main(argv):
         imagefile = "cap" + str(picnum) + ".jpg"
         #Get GPS Coords
         gpsdata = getlocation(gpsdevice)
+        long = converter(gpsdata['longitude'])
+        lat = converter(gpsdata['latitude'])
+        alt = (gpsdata['altitude']).as_integer_ratio()
         wifitree = scan(interface)
         print(gpsdata)
-        camera.exif_tags['GPS.GPSAltitude'] = gpsdata['altitude']
-        camera.exif_tags['GPS.GPSLatitude'] = gpsdata['latitude']
-        camera.exif_tags['GPS.GPSLongitude'] = gpsdata['longitude']
+        camera.exif_tags['GPS.GPSAltitude'] = alt
+        camera.exif_tags['GPS.GPSLatitude'] = lat
+        camera.exif_tags['GPS.GPSLongitude'] = long
         camera.capture(imagefile)
         saveData(wifitree, gpsdata, picnum, conn)
         picnum = picnum + 1
         time.sleep(10) #wait 10 seconds, then rescan
 
+def converter(num):
+        mod1 = num%100
+        deg = int((num-mod1)/100)
+        mod2 = mod1%1
+        min = int(mod1-mod2)
+        sec = mod2*100
+        return ((deg, 1), (min, 1), (sec).as_integer_ratio())
+
 if __name__ == "__main__":
     main(sys.argv)
-
