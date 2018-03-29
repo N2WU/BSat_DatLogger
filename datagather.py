@@ -74,12 +74,17 @@ def scan(interface):
     return wifitree
 
 def converter(num):
+        if len(num) == 10:
+            num = num[1:10]
+        #import pdb;pdb.set_trace()
+        num = float(num)
         mod1 = num%100
         deg = int((num-mod1)/100)
         mod2 = mod1%1
         min = int(mod1-mod2)
-        sec = mod2*100
-        return ((deg, 1), (min, 1), fractions.Fraction.from_float(sec).limit_denominator())
+        sec = int(((round(mod2, 4)/60)*3600)*100)
+        return str(deg) + '/1,' + str(min) + '/1,' + str(sec) + '/100'
+        
 
 def main(argv):
     #get wifi device from argv
@@ -102,12 +107,16 @@ def main(argv):
         gpsdata = getlocation(gpsdevice)
         long = converter(gpsdata['longitude'])
         lat = converter(gpsdata['latitude'])
-        alt = fractions.Fraction.from_float(gpsdata['altitude']).limit_denominator()
+        alt = str(int(float(gpsdata['altitude']))) + '/1'
         wifitree = scan(interface)
         print(gpsdata)
+        print("Going to send: " + lat + " Lat and " +long + " Long")
         camera.exif_tags['GPS.GPSAltitude'] = alt
+        camera.exif_tags['GPS.GPSAltitudeRef'] = '0'
         camera.exif_tags['GPS.GPSLatitude'] = lat
+        camera.exif_tags['GPS.GPSLatitudeRef'] = 'N'
         camera.exif_tags['GPS.GPSLongitude'] = long
+        camera.exif_tags['GPS.GPSLongitudeRef'] = 'W'
         camera.capture(imagefile)
         saveData(wifitree, gpsdata, picnum, conn)
         picnum = picnum + 1
