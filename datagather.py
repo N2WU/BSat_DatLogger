@@ -9,6 +9,7 @@ import time
 import serial
 import logging
 import picamera
+import fractions
 
 def getlocation(gpsdevice): #Pass in gps interface
     #Get current location and return it as a key pair
@@ -72,6 +73,14 @@ def scan(interface):
     wifitree = Cell.all(interface)
     return wifitree
 
+def converter(num):
+        mod1 = num%100
+        deg = int((num-mod1)/100)
+        mod2 = mod1%1
+        min = int(mod1-mod2)
+        sec = mod2*100
+        return ((deg, 1), (min, 1), fractions.Fraction.from_float(sec).limit_denominator())
+
 def main(argv):
     #get wifi device from argv
     print ("Arg: " )
@@ -104,13 +113,6 @@ def main(argv):
         picnum = picnum + 1
         time.sleep(10) #wait 10 seconds, then rescan
 
-def converter(num):
-        mod1 = num%100
-        deg = int((num-mod1)/100)
-        mod2 = mod1%1
-        min = int(mod1-mod2)
-        sec = mod2*100
-        return ((deg, 1), (min, 1), (sec).as_integer_ratio())
 
 if __name__ == "__main__":
     main(sys.argv)
