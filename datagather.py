@@ -10,6 +10,7 @@ import serial
 import logging
 import picamera
 import fractions
+import pdb
 
 def getlocation(gpsdevice): #Pass in gps interface
     #Get current location and return it as a key pair
@@ -49,24 +50,26 @@ def initdb(dbname):
         c = conn.cursor()
         c.execute('''CREATE TABLE datasamples
             (bssid character(12), essid varchar(255),
-            power int, channel int, enc_type varchar(100), mode varchar(100), pic_filename varchar(100), latitude float, longitude float, altitude float, created_at int)''')
+            power int, channel int, enc_type varchar(100), mode varchar(100), pic_filename varchar(100), latitude float, longitude float, altitude float, temperature int, created_at int)''')
         conn.commit()
         print ("Database Created")
         return conn
 
 
-def saveData(wifitree, gpsdata, picnum, conn):
-    for ap in wifitree:
-        encryption = ap.encryption_type
-        print("bssid: " + ap.ssid)
-        print(gpsdata)
-        picfilename = ("picture" + str(picnum) +".jpg")
-        #TODO: Take picture with superimposed GPS coordinates
-        #Save to database
-
-        c = conn.cursor()
-        c.execute("INSERT INTO datasamples(bssid, essid, power, channel, enc_type, mode, pic_filename, latitude, longitude, altitude, created_at) VALUES('" + ap.address + "','" + ap.ssid + "','" + str(ap.signal) + "','" + str(ap.channel) + "','" + encryption + "','" + ap.mode + "', '" + picfilename + "','" + str(gpsdata['latitude']) + "','" + str(gpsdata['longitude']) + "', '" + str(gpsdata['altitude']) + "', '" + gpsdata['timestamp'] + "')")
-        conn.commit()
+def saveData(wifitree, gpsdata, picnum, conn, temp):
+        for ap in wifitree:
+            try:
+                encryption = ap.encryption_type
+                print("bssid: " + ap.ssid)
+                print(gpsdata)
+                picfilename = ("picture" + str(picnum) +".jpg")
+                #TODO: Take picture with superimposed GPS coordinates
+                #Save to database
+                c = conn.cursor()
+                c.execute("INSERT INTO datasamples(bssid, essid, power, channel, enc_type, mode, pic_filename, latitude, longitude, altitude, temperature, created_at) VALUES('" + ap.address + "','" + ap.ssid + "','" + str(ap.signal) + "','" + str(ap.channel) + "','" + encryption + "','" + ap.mode + "', '" + picfilename + "','" + str(gpsdata['latitude']) + "','" + str(gpsdata['longitude']) + "', '" + str(gpsdata['altitude']) + "', '" + temp + "', '" + gpsdata['timestamp'] + "')")
+                conn.commit()
+            except:
+                print("no more wifi networks found")
 
 def scan(interface):
     print("Begin scan")
@@ -102,23 +105,30 @@ def main(argv):
     picnum = 0
     conn = initdb("balloonsat")
     while (1):
-        imagefile = "cap" + str(picnum) + ".jpg"
-        #Get GPS Coords
         gpsdata = getlocation(gpsdevice)
+        imagefile = "cap" + str(gpsdata['timestamp']) + ".jpg"
+        #Get GPS Coords
+        tempFile = open("/sys/class/thermal/thermal_zone0/temp")
+        tempInt = int(tempFile.read(6))
         long = converter(gpsdata['longitude'])
         lat = converter(gpsdata['latitude'])
         alt = str(int(float(gpsdata['altitude']))) + '/1'
         wifitree = scan(interface)
+        print(wifitree)
         print(gpsdata)
         print("Going to send: " + lat + " Lat and " +long + " Long")
-        camera.exif_tags['GPS.GPSAltitude'] = alt
-        camera.exif_tags['GPS.GPSAltitudeRef'] = '0'
-        camera.exif_tags['GPS.GPSLatitude'] = lat
-        camera.exif_tags['GPS.GPSLatitudeRef'] = 'N'
-        camera.exif_tags['GPS.GPSLongitude'] = long
-        camera.exif_tags['GPS.GPSLongitudeRef'] = 'W'
-        camera.capture(imagefile)
-        saveData(wifitree, gpsdata, picnum, conn)
+        try:
+            camera.exif_tags['GPS.GPSAltitude'] = alt
+            camera.exif_tags['GPS.GPSAltitudeRef'] = '0'
+            camera.exif_tags['GPS.GPSLatitude'] = lat
+            camera.exif_tags['GPS.GPSLatitudeRef'] = 'N'
+            camera.exif_tags['GPS.GPSLongitude'] = long
+            camera.exif_tags['GPS.GPSLongitudeRef'] = 'W'
+            #camera.exif_tags[0x9400] = str(tempInt) + '/1000'
+            camera.capture(imagefile)
+        except:
+            print("No camera currently detected") 
+        saveData(wifitree, gpsdata, picnum, conn, tempInt)
         picnum = picnum + 1
         time.sleep(10) #wait 10 seconds, then rescan
 
