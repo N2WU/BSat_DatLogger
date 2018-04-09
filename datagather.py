@@ -1,3 +1,4 @@
+import os.path
 import socket
 import sys
 import os
@@ -32,6 +33,8 @@ def getlocation(gpsdevice): #Pass in gps interface
                 gpsdata = {'latitude':g.latitude, 'longitude': g.longitude, 'timestamp':g.timestamp, 'altitude':g.antenna_altitude}
             else:
                 logging.debug("GPS Text was: " + gpstext[3:8])
+            if gpsdata['latitude'] == '' or gpsdata['longitude'] == '' or gpsdata['altitude'] == '' or gpsdata['timestamp'] == '':
+                gpsdata = {'latitude':'0', 'longitude': '0', 'timestamp':'0', 'altitude':'0'}
     except:
         logging.debug("GPS Not found.  ")
         gpsdata = {'latitude':'0', 'longitude': '0', 'timestamp':'0', 'altitude':'0'}
@@ -50,7 +53,7 @@ def initdb(dbname):
         c = conn.cursor()
         c.execute('''CREATE TABLE datasamples
             (bssid character(12), essid varchar(255),
-            power int, channel int, enc_type varchar(100), mode varchar(100), pic_filename varchar(100), latitude float, longitude float, altitude float, temperature int, created_at int)''')
+            power int, channel int, enc_type varchar(100), mode varchar(100), pic_filename varchar(100), latitude float, longitude float, altitude float, temperature int, created_at float)''')
         conn.commit()
         print ("Database Created")
         return conn
@@ -58,31 +61,29 @@ def initdb(dbname):
 
 def saveData(wifitree, gpsdata, picnum, conn, temp):
         for ap in wifitree:
-            try:
                 encryption = ap.encryption_type
                 print("bssid: " + ap.ssid)
                 print(gpsdata)
-                picfilename = ("picture" + str(picnum) +".jpg")
+                picfilename = ("cap" + str(picnum) +".jpg")
                 #TODO: Take picture with superimposed GPS coordinates
                 #Save to database
                 c = conn.cursor()
-                c.execute("INSERT INTO datasamples(bssid, essid, power, channel, enc_type, mode, pic_filename, latitude, longitude, altitude, temperature, created_at) VALUES('" + ap.address + "','" + ap.ssid + "','" + str(ap.signal) + "','" + str(ap.channel) + "','" + encryption + "','" + ap.mode + "', '" + picfilename + "','" + str(gpsdata['latitude']) + "','" + str(gpsdata['longitude']) + "', '" + str(gpsdata['altitude']) + "', '" + temp + "', '" + gpsdata['timestamp'] + "')")
+                c.execute("INSERT INTO datasamples(bssid, essid, power, channel, enc_type, mode, pic_filename, latitude, longitude, altitude, temperature, created_at) VALUES('" + ap.address + "','" + ap.ssid + "','" + str(ap.signal) + "','" + str(ap.channel) + "','" + encryption + "','" + ap.mode + "', '" + picfilename + "','" + str(float(gpsdata['latitude'])) + "','" + str(float(gpsdata['longitude'])) + "', '" + str(float(gpsdata['altitude'])) + "', '" + str(temp) + "', '" + str(float(gpsdata['timestamp'])) + "')")
                 conn.commit()
-            except:
-                print("no more wifi networks found")
 
 def scan(interface):
     print("Begin scan")
     wifitree = Cell.all(interface)
+    print(wifitree)
     return wifitree
 
 def converter(num):
         if len(num) == 10:
             num = num[1:10]
         #import pdb;pdb.set_trace()
-        num = float(num)
-        mod1 = num%100
-        deg = int((num-mod1)/100)
+        num1 = float(int(num))
+        mod1 = num1%100
+        deg = int((num1-mod1)/100)
         mod2 = mod1%1
         min = int(mod1-mod2)
         sec = int(((round(mod2, 4)/60)*3600)*100)
@@ -98,26 +99,36 @@ def main(argv):
         gpsdevice = argv[2]
     else:
         interface = 'wlan0'
-        gpsdevice = '/dev/ttyUSB0'
+        gpsdevice = '/dev/ttyAMA0'
     camera = picamera.PiCamera()
 
     #Main Loop
     picnum = 0
+    while (os.path.isfile("cap" +str(picnum)+".jpg") == True):
+        picnum += 1 
     conn = initdb("balloonsat")
     while (1):
         gpsdata = getlocation(gpsdevice)
-        imagefile = "cap" + str(gpsdata['timestamp']) + ".jpg"
-        #Get GPS Coords
-        tempFile = open("/sys/class/thermal/thermal_zone0/temp")
-        tempInt = int(tempFile.read(6))
-        long = converter(gpsdata['longitude'])
-        lat = converter(gpsdata['latitude'])
-        alt = str(int(float(gpsdata['altitude']))) + '/1'
-        wifitree = scan(interface)
-        print(wifitree)
-        print(gpsdata)
-        print("Going to send: " + lat + " Lat and " +long + " Long")
+        imagefile = ("cap" + str(picnum) + ".jpg")
         try:
+            long = converter(gpsdata['longitude'])
+            lat = converter(gpsdata['latitude'])
+            alt = str(int(float(gpsdata['altitude']))) + '/1'
+        except:
+            print("Gps Data could not be converted")
+        try:
+            tempfile = open("/sys/class/thermal/thermal_zone0/temp")
+            tempInt = int(tempfile.read(6))
+        except:
+            tempInt = 0
+            print("Temp data could not be retrieved")
+        try:
+            wifitree = scan(interface)
+            print (wifitree)
+        except:
+            print("No wifi data recieved")
+        try:
+            print("Going to send: " + lat + " Lat and " +long + " Long")
             camera.exif_tags['GPS.GPSAltitude'] = alt
             camera.exif_tags['GPS.GPSAltitudeRef'] = '0'
             camera.exif_tags['GPS.GPSLatitude'] = lat
