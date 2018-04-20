@@ -17,7 +17,8 @@ def getlocation(gpsdevice): #Pass in gps interface
     #Get current location and return it as a key pair
     ser = serial.Serial()
     ser.port = gpsdevice
-    ser.baudrate = 4800
+    ser.baudrate = 9600 
+    print("In GPS Getlocation")
     try:
         ser.open()
         logging.debug("Getting GPS Location")
@@ -27,15 +28,20 @@ def getlocation(gpsdevice): #Pass in gps interface
             if (gpstext[3:8] == 'GPGGA'):
                 #Found the proper string, now get the lat long
                 #Probably needs a check for GPS lock.
+                print("Got GPGGA")
                 gotlocation = True
                 g = nmea.GPGGA()
+                #print(gpstext) 
                 g.parse(gpstext)
                 gpsdata = {'latitude':g.latitude, 'longitude': g.longitude, 'timestamp':g.timestamp, 'altitude':g.antenna_altitude}
             else:
-                logging.debug("GPS Text was: " + gpstext[3:8])
-            if gpsdata['latitude'] == '' or gpsdata['longitude'] == '' or gpsdata['altitude'] == '' or gpsdata['timestamp'] == '':
-                gpsdata = {'latitude':'0', 'longitude': '0', 'timestamp':'0', 'altitude':'0'}
+                #print("bad string")
+                #print("GPS Text was: " + gpstext[3:8])
+                #print("Fulltext as: " + gpstext)
+	#if gpsdata['latitude'] == '' or gpsdata['longitude'] == '' or gpsdata['altitude'] == '' or gpsdata['timestamp'] == '':
+                #gpsdata = {'latitude':'0', 'longitude': '0', 'timestamp':'0', 'altitude':'0'}
     except:
+        print("GPS Not found")
         logging.debug("GPS Not found.  ")
         gpsdata = {'latitude':'0', 'longitude': '0', 'timestamp':'0', 'altitude':'0'}
     return gpsdata
@@ -78,10 +84,10 @@ def scan(interface):
     return wifitree
 
 def converter(num):
-        if len(num) == 10:
+        if len(num) == 11:
             num = num[1:10]
         #import pdb;pdb.set_trace()
-        num1 = float(int(num))
+        num1 = float(num)
         mod1 = num1%100
         deg = int((num1-mod1)/100)
         mod2 = mod1%1
@@ -111,6 +117,7 @@ def main(argv):
         gpsdata = getlocation(gpsdevice)
         imagefile = ("cap" + str(picnum) + ".jpg")
         try:
+            print("long: "+str(gpsdata['longitude']))
             long = converter(gpsdata['longitude'])
             lat = converter(gpsdata['latitude'])
             alt = str(int(float(gpsdata['altitude']))) + '/1'
@@ -138,8 +145,11 @@ def main(argv):
             #camera.exif_tags[0x9400] = str(tempInt) + '/1000'
             camera.capture(imagefile)
         except:
-            print("No camera currently detected") 
-        saveData(wifitree, gpsdata, picnum, conn, tempInt)
+            print("No camera currently detected")
+        try: 
+            saveData(wifitree, gpsdata, picnum, conn, tempInt)
+        except:
+            print("No wifi adapter detected")
         picnum = picnum + 1
         time.sleep(10) #wait 10 seconds, then rescan
 
