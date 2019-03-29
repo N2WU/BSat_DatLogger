@@ -17,7 +17,7 @@ def getlocation(gpsdevice): #Pass in gps interface
     #Get current location and return it as a key pair
     ser = serial.Serial()
     ser.port = gpsdevice
-    ser.baudrate = 9600 
+    ser.baudrate = 9600
     print("In GPS Getlocation")
     try:
         ser.open()
@@ -31,7 +31,7 @@ def getlocation(gpsdevice): #Pass in gps interface
                 print("Got GPGGA")
                 gotlocation = True
                 g = nmea.GPGGA()
-                #print(gpstext) 
+                #print(gpstext)
                 g.parse(gpstext)
                 gpsdata = {'latitude':g.latitude, 'longitude': g.longitude, 'timestamp':g.timestamp, 'altitude':g.antenna_altitude}
             else:
@@ -80,10 +80,10 @@ def saveData(wifitree, gpsdata, picnum, conn, temp):
 def scan(interface):
     print("Begin scan")
     wifitree = Cell.all(interface)
-    print(wifitree)
+    #print(wifitree)
     return wifitree
 
-def converter(num):
+def converter(num): #to convert decimal GPS to deg,min,sec
         if len(num) == 11:
             num = num[1:10]
         #import pdb;pdb.set_trace()
@@ -94,7 +94,7 @@ def converter(num):
         min = int(mod1-mod2)
         sec = int(((round(mod2, 4)/60)*3600)*100)
         return str(deg) + '/1,' + str(min) + '/1,' + str(sec) + '/100'
-        
+
 
 def main(argv):
     #get wifi device from argv
@@ -107,11 +107,12 @@ def main(argv):
         interface = 'wlan0'
         gpsdevice = '/dev/ttyAMA0'
     camera = picamera.PiCamera()
+    camera.resolution = (2590, 1940) #this is assuming v1, will change to 3280 × 2464 if v2
 
     #Main Loop
     picnum = 0
     while (os.path.isfile("cap" +str(picnum)+".jpg") == True):
-        picnum += 1 
+        picnum += 1
     conn = initdb("balloonsat")
     while (1):
         gpsdata = getlocation(gpsdevice)
@@ -146,12 +147,12 @@ def main(argv):
             camera.capture(imagefile)
         except:
             print("No camera currently detected")
-        try: 
+        try:
             saveData(wifitree, gpsdata, picnum, conn, tempInt)
         except:
             print("No wifi adapter detected")
         picnum = picnum + 1
-        time.sleep(10) #wait 10 seconds, then rescan
+        time.sleep(5) #wait 10 seconds, then rescan
 
 
 if __name__ == "__main__":
