@@ -24,6 +24,7 @@ def getlocation(agps_thread): #Pass in gps interface
     try:
         print('Lat{}'.format(agps_thread.data_stream.lat))
         gpsdata = ''
+        #pdb.set_trace()
         #new_data = gps_socket[1]
         #if new_data:
         #    data_stream.unpack(new_data)
@@ -126,13 +127,14 @@ def main(argv):
     while (1):
         gpsdata = getlocation(agps_thread)
         imagefile = ("cap" + str(picnum) + ".jpg")
-        #try:
+        try:
             #print("long: "+str(gpsdata['longitude']))
-            #long = converter(gpsdata['longitude'])
-            #lat = converter(gpsdata['latitude'])
-            #alt = str(int(float(gpsdata['altitude']))) + '/1'
-        #except:
-        #    print("Gps Data could not be converted")
+            lon = (agps_thread.data_stream.lon)
+            lat = (agps_thread.data_stream.lat)
+            alt = str(int(float(agps_thread.data_stream.alt))) + '/1'
+            print("lat " +str(lat) + "lon "+str(lon) + " alt " + str(alt))
+        except:
+            print("Gps Data could not be converted")
         try:
             tempfile = open("/sys/class/thermal/thermal_zone0/temp")
             tempInt = int(tempfile.read(6))
