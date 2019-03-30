@@ -5,43 +5,59 @@ import os
 import sqlite3
 from subprocess import call
 from wifi import Cell
-from pynmea import nmea
+import pynmea2
 import time
 import serial
 import logging
 import picamera
 import fractions
 import pdb
+#from gps3 import gps3
+from gps3.agps3threaded import AGPS3mechanism
 
-def getlocation(gpsdevice): #Pass in gps interface
+def getlocation(agps_thread): #Pass in gps interface
     #Get current location and return it as a key pair
-    ser = serial.Serial()
-    ser.port = gpsdevice
-    ser.baudrate = 9600
+    #ser = serial.Serial()
+    #ser.port = gpsdevice
+    #ser.baudrate = 4800
     print("In GPS Getlocation")
     try:
-        ser.open()
-        logging.debug("Getting GPS Location")
-        gotlocation = False
-        while (gotlocation == False):
-            gpstext = str(ser.readline())
-            if (gpstext[3:8] == 'GPGGA'):
+        print('Lat{}'.format(agps_thread.data_stream.lat))
+        gpsdata = ''
+        #new_data = gps_socket[1]
+        #if new_data:
+        #    data_stream.unpack(new_data)
+            #pdb.set_trace()
+        #    print("latitude= ", data_stream.TPV['lat'])
+        #    print(data_stream)
+        #ser.open()
+        #logging.debug("Getting GPS Location")
+        #gotlocation = False
+        #while (gotlocation == False):
+            #gpstext = str(ser.readline())
+            #if (gpstext[3:8] == 'GPGGA'):
                 #Found the proper string, now get the lat long
                 #Probably needs a check for GPS lock.
-                print("Got GPGGA")
-                gotlocation = True
-                g = nmea.GPGGA()
+                #print("Got GPGGA")
+                #gotlocation = True
+                #g = nmea.GPGGA()
                 #print(gpstext)
-                g.parse(gpstext)
-                gpsdata = {'latitude':g.latitude, 'longitude': g.longitude, 'timestamp':g.timestamp, 'altitude':g.antenna_altitude}
-            else:
+                #g.parse(gpstext)
+                #We need to truncate the string.  Remove the first two and last 5 of it
+                #g = pynmea2.parse(gpstext[2:-5])
+                #print("Parsed data is : " + g)
+                #gpsdata = {'latitude':g.latitude, 'longitude': g.longitude, 'timestamp':g.timestamp, 'altitude':g.altitude}
+                #return g
+            #else:
                 #print("bad string")
                 #print("GPS Text was: " + gpstext[3:8])
                 #print("Fulltext as: " + gpstext)
-	#if gpsdata['latitude'] == '' or gpsdata['longitude'] == '' or gpsdata['altitude'] == '' or gpsdata['timestamp'] == '':
+	        #if gpsdata['latitude'] == '' or gpsdata['longitude'] == '' or gpsdata['altitude'] == '' or gpsdata['timestamp'] == '':
                 #gpsdata = {'latitude':'0', 'longitude': '0', 'timestamp':'0', 'altitude':'0'}
-    except:
-        print("GPS Not found")
+
+    except Exception as e:
+        print(e)
+        print("GPS Not found or GPS failed")
         logging.debug("GPS Not found.  ")
         gpsdata = {'latitude':'0', 'longitude': '0', 'timestamp':'0', 'altitude':'0'}
     return gpsdata
@@ -83,19 +99,6 @@ def scan(interface):
     #print(wifitree)
     return wifitree
 
-def converter(num): #to convert decimal GPS to deg,min,sec
-        if len(num) == 11:
-            num = num[1:10]
-        #import pdb;pdb.set_trace()
-        num1 = float(num)
-        mod1 = num1%100
-        deg = int((num1-mod1)/100)
-        mod2 = mod1%1
-        min = int(mod1-mod2)
-        sec = int(((round(mod2, 4)/60)*3600)*100)
-        return str(deg) + '/1,' + str(min) + '/1,' + str(sec) + '/100'
-
-
 def main(argv):
     #get wifi device from argv
     print ("Arg: " )
@@ -105,25 +108,31 @@ def main(argv):
         gpsdevice = argv[2]
     else:
         interface = 'wlan0'
-        gpsdevice = '/dev/ttyAMA0'
+        #gpsdevice = '/dev/ttyS0' #depricated
     camera = picamera.PiCamera()
     camera.resolution = (2590, 1940) #this is assuming v1, will change to 3280 × 2464 if v2
-
     #Main Loop
     picnum = 0
     while (os.path.isfile("cap" +str(picnum)+".jpg") == True):
         picnum += 1
     conn = initdb("balloonsat")
+    #gps_socket = gps3.GPSDSocket()
+    #data_stream = gps3.DataStream()
+    #gps_socket.connect()
+    #gps_socket.watch()
+    agps_thread = AGPS3mechanism()
+    agps_thread.stream_data()
+    agps_thread.run_thread()
     while (1):
-        gpsdata = getlocation(gpsdevice)
+        gpsdata = getlocation(agps_thread)
         imagefile = ("cap" + str(picnum) + ".jpg")
-        try:
-            print("long: "+str(gpsdata['longitude']))
-            long = converter(gpsdata['longitude'])
-            lat = converter(gpsdata['latitude'])
-            alt = str(int(float(gpsdata['altitude']))) + '/1'
-        except:
-            print("Gps Data could not be converted")
+        #try:
+            #print("long: "+str(gpsdata['longitude']))
+            #long = converter(gpsdata['longitude'])
+            #lat = converter(gpsdata['latitude'])
+            #alt = str(int(float(gpsdata['altitude']))) + '/1'
+        #except:
+        #    print("Gps Data could not be converted")
         try:
             tempfile = open("/sys/class/thermal/thermal_zone0/temp")
             tempInt = int(tempfile.read(6))
@@ -136,14 +145,15 @@ def main(argv):
         except:
             print("No wifi data recieved")
         try:
-            print("Going to send: " + lat + " Lat and " +long + " Long")
-            camera.exif_tags['GPS.GPSAltitude'] = alt
+            print("Going to send: " + gpsdata.latitude + " Lat and " + gpsdata.longitude + " Long")
+            camera.exif_tags['GPS.GPSAltitude'] = gpsdata.altitude
             camera.exif_tags['GPS.GPSAltitudeRef'] = '0'
             camera.exif_tags['GPS.GPSLatitude'] = lat
             camera.exif_tags['GPS.GPSLatitudeRef'] = 'N'
             camera.exif_tags['GPS.GPSLongitude'] = long
             camera.exif_tags['GPS.GPSLongitudeRef'] = 'W'
             #camera.exif_tags[0x9400] = str(tempInt) + '/1000'
+            set_trace()
             camera.capture(imagefile)
         except:
             print("No camera currently detected")
