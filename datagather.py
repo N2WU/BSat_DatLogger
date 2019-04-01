@@ -23,12 +23,14 @@ def getlocation(agps_thread): #Pass in gps interface
     print("In GPS Getlocation")
     try:
         print('Lat{}'.format(agps_thread.data_stream.lat))
-        gpsdata = ''
+        gpsdata = {'latitude': agps_thread.data_stream.lat, 'longitude': agps_thread.data_stream.lon, 'timestamp' : agps_thread.data_stream.time, 'altitude' : agps_thread.data_stream.alt}
+        if gpsdata['latitude'] == 'n\a' or gpsdata['longitude'] == 'n/a' or gpsdata['altitude'] == 'n/a' or gpsdata['timestamp'] == 'n/a':
+            gpsdata = {'latitude': '0', 'longitude': '0', 'timestamp': '0', 'altitude': '0'}
         #pdb.set_trace()
         #new_data = gps_socket[1]
         #if new_data:
         #    data_stream.unpack(new_data)
-            #pdb.set_trace()
+        #    pdb.set_trace()
         #    print("latitude= ", data_stream.TPV['lat'])
         #    print(data_stream)
         #ser.open()
@@ -86,7 +88,7 @@ def saveData(wifitree, gpsdata, picnum, conn, temp):
         for ap in wifitree:
                 encryption = ap.encryption_type
                 print("bssid: " + ap.ssid)
-                print(gpsdata)
+                pdb.set_trace()
                 picfilename = ("cap" + str(picnum) +".jpg")
                 #TODO: Take picture with superimposed GPS coordinates
                 #Save to database
@@ -108,10 +110,10 @@ def main(argv):
         interface = argv[1]
         gpsdevice = argv[2]
     else:
-        interface = 'wlan0'
+        interface = 'wlan1'
         #gpsdevice = '/dev/ttyS0' #depricated
     camera = picamera.PiCamera()
-    camera.resolution = (2590, 1940) #this is assuming v1, will change to 3280 × 2464 if v2
+    camera.resolution = (3280, 2464) #this is assuming v1, will change to 3280 × 2464 if v2
     #Main Loop
     picnum = 0
     while (os.path.isfile("cap" +str(picnum)+".jpg") == True):
@@ -124,17 +126,22 @@ def main(argv):
     agps_thread = AGPS3mechanism()
     agps_thread.stream_data()
     agps_thread.run_thread()
+    gpsdata = {}
     while (1):
         gpsdata = getlocation(agps_thread)
         imagefile = ("cap" + str(picnum) + ".jpg")
+        #print("The GPS data is:" + str(gpsdata))
+        lat = ''
+        lon = ''
+        alt = ''
+        timestamp = ''
         try:
-            #print("long: "+str(gpsdata['longitude']))
-            lon = (agps_thread.data_stream.lon)
-            lat = (agps_thread.data_stream.lat)
-            alt = str(int(float(agps_thread.data_stream.alt))) + '/1'
-            print("lat " +str(lat) + "lon "+str(lon) + " alt " + str(alt))
+            print("lat " +str(gpsdata['latitude']) + "lon "+str(gpsdata['longitude']) + " alt " + str(gpsdata['altitude']))
+            lat = gpsdata['latitude']
+            lon = gpsdata['longitude']
+            alt = gpsdata['altitude']
         except:
-            print("Gps Data could not be converted")
+            print("Gps Data could not be printed/converted")
         try:
             tempfile = open("/sys/class/thermal/thermal_zone0/temp")
             tempInt = int(tempfile.read(6))
@@ -147,22 +154,22 @@ def main(argv):
         except:
             print("No wifi data recieved")
         try:
-            print("Going to send: " + gpsdata.latitude + " Lat and " + gpsdata.longitude + " Long")
-            camera.exif_tags['GPS.GPSAltitude'] = gpsdata.altitude
-            camera.exif_tags['GPS.GPSAltitudeRef'] = '0'
-            camera.exif_tags['GPS.GPSLatitude'] = lat
-            camera.exif_tags['GPS.GPSLatitudeRef'] = 'N'
-            camera.exif_tags['GPS.GPSLongitude'] = long
-            camera.exif_tags['GPS.GPSLongitudeRef'] = 'W'
+            #pdb.set_trace()
+            #print("Going to send: " + str(lat) + " Lat and " + str(lon) + " Long")
+            #camera.exif_tags['GPS.GPSAltitude'] = gpsdata.altitude
+            #camera.exif_tags['GPS.GPSAltitudeRef'] = '0'
+            #camera.exif_tags['GPS.GPSLatitude'] = lat
+            #camera.exif_tags['GPS.GPSLatitudeRef'] = 'N'
+            #camera.exif_tags['GPS.GPSLongitude'] = long
+            #camera.exif_tags['GPS.GPSLongitudeRef'] = 'W'
             #camera.exif_tags[0x9400] = str(tempInt) + '/1000'
-            set_trace()
             camera.capture(imagefile)
         except:
             print("No camera currently detected")
         try:
             saveData(wifitree, gpsdata, picnum, conn, tempInt)
         except:
-            print("No wifi adapter detected")
+            print("unable to save data")
         picnum = picnum + 1
         time.sleep(5) #wait 10 seconds, then rescan
 
