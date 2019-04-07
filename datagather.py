@@ -68,13 +68,13 @@ def getlocation(agps_thread): #Pass in gps interface
 
 def initdb(dbname):
     #Check if db exists.  Create the db if it does not.
-    if os.path.isfile(dbname + ".db"):
-        conn = sqlite3.connect(dbname + ".db")
+    if os.path.isfile("/home/pi/data/" + dbname + ".db"):
+        conn = sqlite3.connect("/home/pi/data/" + dbname + ".db")
         print ("Connected to " + dbname)
         return conn
     else:
         #Open and create the database and add encoding types
-        conn = sqlite3.connect(dbname + ".db")
+        conn = sqlite3.connect("/home/pi/data/" + dbname + ".db")
         c = conn.cursor()
         c.execute('''CREATE TABLE datasamples
             (bssid character(12), essid varchar(255),
@@ -85,16 +85,27 @@ def initdb(dbname):
 
 
 def saveData(wifitree, gpsdata, picnum, conn, temp):
+        try:
+            c = conn.cursor()
+            picfilename = ("cap" + str(picnum) +".jpg")
+            c.execute("INSERT INTO datasamples(bssid, essid, power, channel, enc_type, mode, pic_filename, latitude, longitude, altitude, temperature, created_at) VALUES('" + "BSat2019" + "','" + "ESSID" + "','" + "POWER" + "','" + "CHANNEL" + "','" + "ENC_TYPE" + "','" + "MODE" + "', '" + picfilename + "','" + str(float(gpsdata['latitude'])) + "','" + str(float(gpsdata['longitude'])) + "', '" + str(float(gpsdata['altitude'])) + "', '" + str(temp) + "', '" + str(gpsdata['timestamp']) + "')")
+            conn.commit()
+            print("saved data")
+        except:
+            print("Main point didn't save")
         for ap in wifitree:
-                encryption = ap.encryption_type
-                print("bssid: " + ap.ssid)
-                pdb.set_trace()
-                picfilename = ("cap" + str(picnum) +".jpg")
-                #TODO: Take picture with superimposed GPS coordinates
-                #Save to database
-                c = conn.cursor()
-                c.execute("INSERT INTO datasamples(bssid, essid, power, channel, enc_type, mode, pic_filename, latitude, longitude, altitude, temperature, created_at) VALUES('" + ap.address + "','" + ap.ssid + "','" + str(ap.signal) + "','" + str(ap.channel) + "','" + encryption + "','" + ap.mode + "', '" + picfilename + "','" + str(float(gpsdata['latitude'])) + "','" + str(float(gpsdata['longitude'])) + "', '" + str(float(gpsdata['altitude'])) + "', '" + str(temp) + "', '" + str(float(gpsdata['timestamp'])) + "')")
-                conn.commit()
+                try:
+                    encryption = ap.encryption_type
+                    print("bssid: " + ap.ssid)
+                    #pdb.set_trace()
+                    picfilename = ("cap" + str(picnum) +".jpg")
+                    #TODO: Take picture with superimposed GPS coordinates
+                    #Save to database
+                    c = conn.cursor()
+                    c.execute("INSERT INTO datasamples(bssid, essid, power, channel, enc_type, mode, pic_filename, latitude, longitude, altitude, temperature, created_at) VALUES('" + ap.address + "','" + ap.ssid + "','" + str(ap.signal) + "','" + str(ap.channel) + "','" + encryption + "','" + ap.mode + "', '" + picfilename + "','" + str(float(gpsdata['latitude'])) + "','" + str(float(gpsdata['longitude'])) + "', '" + str(float(gpsdata['altitude'])) + "', '" + str(temp) + "', '" + str(gpsdata['timestamp']) + "')")
+                    conn.commit()
+                except:
+                    print("could not save that wap entry")
 
 def scan(interface):
     print("Begin scan")
@@ -116,7 +127,7 @@ def main(argv):
     camera.resolution = (3280, 2464) #this is assuming v1, will change to 3280 × 2464 if v2
     #Main Loop
     picnum = 0
-    while (os.path.isfile("cap" +str(picnum)+".jpg") == True):
+    while (os.path.isfile("/home/pi/data/cap" +str(picnum)+".jpg") == True):
         picnum += 1
     conn = initdb("balloonsat")
     #gps_socket = gps3.GPSDSocket()
@@ -152,7 +163,8 @@ def main(argv):
             wifitree = scan(interface)
             print (wifitree)
         except:
-            print("No wifi data recieved")
+            print("No wifi data recieved, setting wifi to blank string")
+            wifitree = ""
         try:
             #pdb.set_trace()
             #print("Going to send: " + str(lat) + " Lat and " + str(lon) + " Long")
@@ -163,7 +175,7 @@ def main(argv):
             #camera.exif_tags['GPS.GPSLongitude'] = long
             #camera.exif_tags['GPS.GPSLongitudeRef'] = 'W'
             #camera.exif_tags[0x9400] = str(tempInt) + '/1000'
-            camera.capture(imagefile)
+            camera.capture("/home/pi/data/" + imagefile)
         except:
             print("No camera currently detected")
         try:
@@ -171,7 +183,7 @@ def main(argv):
         except:
             print("unable to save data")
         picnum = picnum + 1
-        time.sleep(5) #wait 10 seconds, then rescan
+        time.sleep(10) #wait 10 seconds, then rescan
 
 
 if __name__ == "__main__":
