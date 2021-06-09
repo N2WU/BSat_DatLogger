@@ -30,9 +30,6 @@ with open('data.csv', 'w') as f:
     
     
 #Now, set up the radio for transmitting
-#
-
-
 
 pipes = [[0xe7, 0xe7, 0xe7, 0xe7, 0xe7], [0xc2, 0xc2, 0xc2, 0xc2, 0xc2]]
 
@@ -54,6 +51,8 @@ radio.printDetails()
 
 ackPL = [1]
 
+
+#define GPS function
 def getPositionData(gps):
     nx = gpsd.next()
     # For a list of all supported classes and fields refer to:
@@ -67,6 +66,7 @@ def getPositionData(gps):
 
 gpsd = gps(mode=WATCH_ENABLE|WATCH_NEWSTYLE)
 
+#get SMBus weather data from MPL3115A2: https://www.instructables.com/Raspberry-Pi-MPL3115A2-Precision-Altimeter-Sensor--1/
 def getWeatherData():
     # Distributed with a free-will license.
     # Use it any way you want, profit or free, provided it fits in the licenses of its associated works.
