@@ -18,8 +18,8 @@ def getPositionData(gps):
 gpsd = gps(mode=WATCH_ENABLE|WATCH_NEWSTYLE)
 
         
-    
-    
+# Next read from the pressure sensor    
+# Transmit telemetry every time the pictures are timestamped
 
 # Our file path
 filePath = "/home/pi/Desktop/cookie/timestamped_pics/"
