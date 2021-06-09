@@ -3,12 +3,12 @@ import time
 import picamera
 from subprocess import call
 from datetime import datetime
-from time import sleep #fix this
+#from time import sleep #fix this
 import smbus
 import csv
 
 #Row = [index, gpsData, weatherData]
-CSVHeaders = ["Index", "Latitude", "Longtitude", "Pressure (kPa)", "Altitude (m)", "Temperature (C)"] 
+CSVHeaders = ["Index", "Time", "Latitude", "Longtitude", "Pressure (kPa)", "Altitude (m)", "Temperature (C)"] 
 with open('data.csv', 'w') as f: 
     write = csv.writer(f) 
     write.writerow(CSVHeaders) 
@@ -78,7 +78,10 @@ def getWeatherData():
 
          
 def writeCSV(gpsData, weatherData, index)
-    Row = [index, gpsData, weatherData]
+    timenow = datetime.now()
+    # Create file name for our picture
+    stringTime = currentTime.strftime("%Y.%m.%d-%H%M%S")
+    Row = [index, stringTime, gpsData[0], gpsData[1], weatherData[0], weatherData[1], weatherData[2]]
     with open(r'data.csv', 'a') as f:
     writer = csv.writer(f)
     writer.writerow(Row)
@@ -109,11 +112,11 @@ while picCount < picTotal:
     weatherData = getWeatherData()
     # Create our stamp variable
     timestampMessage = currentTime.strftime("%Y.%m.%d - %H:%M:%S")
-    newTimestampMessage = timestampMessage + gpsData[0] + "," + gpsData[1]
+    newTimestampMessage = timestampMessage + "Lat:" + gpsData[0] + ", Lon:" + gpsData[1] + ", Alt (m):" + weatherData[1]  
     # Create time stamp command to have executed
     # print("Pressure (kPa)" + weatherData[0] + "Altitude (m)" + weatherData[1] + "Temp (C)" + weatherData[2])
     timestampCommand = "/usr/bin/convert " + completeFilePath + " -pointsize 36 \
-    -fill red -annotate +700+650 '" + timestampMessage + "' " + completeFilePath
+    -fill white -annotate +100+100 '" + timestampMessage + "' " + completeFilePath
     # Actually execute the command!
     call([timestampCommand], shell=True)
     print("We have timestamped our picture!")
@@ -121,7 +124,7 @@ while picCount < picTotal:
     print("Written to CSV")
     # Advance our picture counter
     picCount += 1
-    sleep(10)
+    time.sleep(10)
 
          
 
