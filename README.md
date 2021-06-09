@@ -20,6 +20,7 @@ Takes from these links:
 2. https://picamera.readthedocs.io/en/release-1.13/quickstart.html
 3. https://developer.here.com/blog/read-gps-data-with-a-raspberry-pi-zero-w-and-node.js?cid=Developer-Facebook_Comms-CM--Devblog-
 4. https://www.raspberrypi-spy.co.uk/2012/08/reading-analogue-sensors-with-one-gpio-pin/ (optional)
+5. http://thezanshow.com/electronics-tutorials/raspberry-pi/tutorial-14
 
 Requires the following additional python modules
 wifi
