@@ -6,6 +6,9 @@ Requires:
 1. High-altitude GPS via serial
 3. Barometer / Altimeter via MPL3115A2 (i2c)
 4. nRF24L01 radio bluetooth module
+5. Raspberry Pi Zero
+6. 3.7V to 5V boost converter with extra microUSB connection (https://thepihut.com/blogs/raspberry-pi-tutorials/running-a-raspberry-pi-zero-from-an-aa-battery-pack)
+7. Custom PCB (in the works)
 
 Simple script with the following steps:
 1. Captures GPS data, temperature, and pressure
