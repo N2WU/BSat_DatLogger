@@ -36,3 +36,5 @@ Wiring Guide:
 2. Connect nRF24L01 using SPI
 3. Connect GPS to Serial
 4. Connect MPL3115A2 to I2C
+
+**Note:** There are quite a few steps the raspberry pi zero has to go through before the code can be run. Comb through each of the links and perform the steps (usually install modules, turn on SPI/UART/Serial/I2C, then test example code.
