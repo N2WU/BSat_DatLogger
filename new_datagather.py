@@ -131,7 +131,7 @@ def writeCSV(gpsData, weatherData, index)
 # Transmit telemetry every time the pictures are timestamped
 
 # Our file path
-filePath = "/home/pi/Desktop/timestamped_pics/"
+filePath = "/home/pi/timestamped_pics/"
 picTotal = 50
 picCount = 0
 
